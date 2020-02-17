@@ -7,10 +7,11 @@
 # Customer Key
 # Cluster count
 # Cluster times (spread, converted to hms)
-# Cluster wss scaled
+# Cluster wss scored
 # Day (mode)
 # Time to contact Min time - 10
 
+# tid: 70 min
 # --------------------------------------------------------------------------------
 
 library(tidyverse)
@@ -38,14 +39,14 @@ channel <- odbcConnect(credentials[1],credentials[2],credentials[3])
 #   ,[Customer_Key]
 #       ,reader.[TimeOfDay_Key]
 # 	  ,timeday.TimeOfDay
-# 
-# 
+#
+#
 #   FROM [EDW].[fact].[ReaderFact] as reader
 #   left join [EDW].[dim].[TimeOfDay] timeday on timeday.TimeOfDay_Key = reader.TimeOfDay_Key
-# 
+#
 #   where Date_Key >= (SELECT CONVERT(INT, CONVERT(VARCHAR(8), GETDATE()-45, 112)))
 #   and Customer_Key != -1"
-# 
+#
 # df <- sqlQuery(channel,query)
 
 # write_csv(df,"example_data.csv")
@@ -59,7 +60,7 @@ h2o.init(nthreads = -1)
 
 keys <- df %>%
   distinct(Customer_Key) %>%
-  sample_frac(.1) %>%
+  sample_frac(.5) %>%
   pull(Customer_Key)
 
 df <- df %>%

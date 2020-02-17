@@ -7,7 +7,7 @@ library(data.table)
 library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)
 library(ggridges)
-
+library(rayshader)
 
 
 credentials <- read_rds("credentials.rds")
@@ -46,11 +46,13 @@ df <- df %>%
   select(Date,Time,Customer_Key,WeekDay) %>%
   mutate(WeekDay = if_else(WeekDay > 1,WeekDay - 1,7)) # monday should be first day
 
-keys <- df %>%
-  sample_n(10000) %>%
+keysBig <- df %>%
+  distinct(Customer_Key) %>%
+  sample_n(100) %>%
   pull(Customer_Key)
 
-keys = c(14796657,958983,1072962,1097690,12296292,14892116)
+keys = c(14796657,958983,1072962,1097690,12296292,14892116,1139872)
+
 # example hour weekday
 df %>%
   filter(Customer_Key %in% keys) %>%
@@ -64,6 +66,19 @@ df %>%
   theme_minimal() +
   facet_wrap(~Customer_Key)
 
+df %>%
+  filter(Customer_Key %in% keys[1:100]) %>%
+  mutate(hour = lubridate::hour(Time)) %>%
+  count(Customer_Key,hour) %>%
+  as_tibble() %>%
+  complete(Customer_Key,hour = 0:23,fill=list(n=0)) %>%
+  ggplot(aes(hour,as.character(Customer_Key),fill=log(n+1))) +
+  geom_tile() +
+  scale_fill_gradient(low= "lightyellow",high = "darkred") +
+  theme_minimal() +
+  theme(axis.text.y = element_blank(),
+        panel.grid = element_blank())
+  
 # density all users
 
 df %>%
@@ -94,7 +109,7 @@ df %>%
   geom_jitter(alpha = .8) +
   geom_point(aes(mT,WeekDay,colour=WeekDay==mD),size=3)
 
-tic()
+
 d<-df %>%
   #sample_frac(.01) %>%
   filter(Customer_Key %in% keys) %>%
@@ -108,3 +123,53 @@ d<-df %>%
 toc()
 
 write_csv(d,"data_Day_Time.csv")
+
+
+
+# rayshader heatmap all users
+themeval = theme(panel.border = element_blank(), 
+                 panel.grid.major = element_blank(), 
+                 panel.grid.minor = element_blank(), 
+                 axis.line = element_blank(), 
+                 axis.ticks = element_blank(),
+                 axis.text.x = element_blank(), 
+                 axis.text.y = element_blank(), 
+                 axis.title.x = element_blank(), 
+                 axis.title.y = element_blank(),
+                 legend.key = element_blank(),
+                 plot.margin = unit(c(0.5, 0, 0, 0), "cm"))
+
+all_users_hm <- df %>%
+  mutate(hour = lubridate::hour(Time)) %>%
+  count(WeekDay,hour) %>%
+  as_tibble() %>%
+  complete(WeekDay=1:7,hour = 0:23,fill=list(n=0)) %>%
+  ggplot(aes(factor(WeekDay),hour,fill=log(n+1))) +
+  geom_tile() +
+  scale_fill_gradient(low= "lightyellow",high = "darkred") +
+  theme_minimal() +
+  labs(y="Time", x = "Ugedag") +
+  theme(legend.position = "none") 
+
+plot_gg(all_users_hm, width = 5, height = 7, multicore = TRUE, scale = 250, 
+        zoom = 0.7, theta = 10, phi = 30, windowsize = c(800, 800))
+
+Sys.sleep(0.2)
+render_snapshot(clear = TRUE)
+
+# animated
+
+p = plot_gg(all_users_hm, multicore = TRUE, raytrace=TRUE,
+                   shadow_intensity = 0.3,
+                   width=6,height=8, soliddepth = -100, save_height_matrix = TRUE,
+                   background = "#f5e9dc", shadowcolor= "#4f463c",windowsize=c(1200,1000))
+
+
+for(i in 1:360) {
+  render_camera(phi=30,theta=45+i,fov=70,zoom=0.8)
+  render_depth( 
+               title_text = "Streaming aktivitet - ugedage og timer", 
+               title_size = 35,
+               filename = glue::glue("img/streaming_hm{i}"))
+}
+
