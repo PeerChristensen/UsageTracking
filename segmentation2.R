@@ -3,15 +3,14 @@
 # Get cluster wss and scale
 # Add best day and time time
 
-# output
+# output:
 # Customer Key
-# Cluster count
-# Cluster times (spread, converted to hms)
-# Cluster wss scored
-# Day (mode)
-# Time to contact Min time - 10
+# Dag
+# tid 1
+# tid 1 wss score 1-5 (5 = stor spredning)
+# tid 2, 3...
 
-# tid: 70 min
+# kørselstid: 3t 20 min
 # --------------------------------------------------------------------------------
 
 library(tidyverse)
@@ -28,39 +27,41 @@ library(tictoc)
 library(h2o)
 library(hms)
 
+tic()
+
 credentials <- read_rds("credentials.rds")
 
 channel <- odbcConnect(credentials[1],credentials[2],credentials[3])
 
-#	  ,timeday.TimeOfDayHour
-#,timeday.TimeOfDayMinute
+# 	  ,timeday.TimeOfDayHour
+#     ,timeday.TimeOfDayMinute
 
-# query <- "SELECT Date_Key
-#   ,[Customer_Key]
-#       ,reader.[TimeOfDay_Key]
-# 	  ,timeday.TimeOfDay
-#
-#
-#   FROM [EDW].[fact].[ReaderFact] as reader
-#   left join [EDW].[dim].[TimeOfDay] timeday on timeday.TimeOfDay_Key = reader.TimeOfDay_Key
-#
-#   where Date_Key >= (SELECT CONVERT(INT, CONVERT(VARCHAR(8), GETDATE()-45, 112)))
-#   and Customer_Key != -1"
-#
-# df <- sqlQuery(channel,query)
-
-# write_csv(df,"example_data.csv")
+query <- "SELECT Date_Key
+    ,[Customer_Key]
+        ,reader.[TimeOfDay_Key]
+  	  ,timeday.TimeOfDay
+ 
+ 
+    FROM [EDW].[fact].[ReaderFact] as reader
+    left join [EDW].[dim].[TimeOfDay] timeday on timeday.TimeOfDay_Key = reader.TimeOfDay_Key
+ 
+    where Date_Key >= (SELECT CONVERT(INT, CONVERT(VARCHAR(8), GETDATE()-45, 112)))
+    and Customer_Key != -1"
+ 
+df <- sqlQuery(channel,query)
+ 
+ # write_csv(df,"example_data.csv")
 
 # ----------------------------------------------------------------------------------------
-tic()
-df <- data.table::fread("example_data.csv") %>%
-  distinct()
+
+#df <- data.table::fread("example_data.csv") %>%
+#  distinct()
 
 h2o.init(nthreads = -1)
 
 keys <- df %>%
   distinct(Customer_Key) %>%
-  sample_frac(.5) %>%
+  sample_frac(1) %>%
   pull(Customer_Key)
 
 df <- df %>%
@@ -102,7 +103,7 @@ for(key in keys){
   
     d <- as.h2o(d)
   
-    km = h2o.kmeans(d,k=3, x = c("Time"),estimate_k = T)
+    km = h2o.kmeans(d,k = 3, x = c("Time"),estimate_k = T)
     
     centers <- km@model$centers %>% as_tibble()
     centers$time <- hms::hms(centers$time)
@@ -125,8 +126,10 @@ output <- all_centers %>%
   full_join(all_keys)
   
 
-
 toc()
+
+#write_csv(output,"full_output.csv")
+
 # df %>%
 #   ggplot(aes(medianTime,sdTime,colour=factor(cluster))) +
 #   geom_point(alpha = .5) +
