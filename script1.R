@@ -83,7 +83,7 @@ df %>%
 
 df %>%
   as_tibble() %>%
-  filter(Customer_Key %in% keys) %>%
+  #filter(Customer_Key %in% keys) %>%
   #sample_frac(.1) %>%
   ggplot(aes(x=Time,y=factor(Customer_Key),fill=stat(y))) +
   geom_density_ridges(alpha = .9,colour="snow") +
