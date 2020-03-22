@@ -24,7 +24,7 @@ SELECT
 order by Customer_Key, BucketNo
 "
 
-credentials <- read_rds("credentials.rds")
+wcredentials <- read_rds("credentials.rds")
 
 channel <- odbcConnect(credentials[1],credentials[2],credentials[3])
 

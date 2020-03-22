@@ -56,19 +56,22 @@ df <- sqlQuery(channel,query)
 
 #df <- data.table::fread("example_data.csv") %>%
 #  distinct()
+library(tictoc)
+tic()
+h2o.init(nthreads = 1)
+h2o.no_progress()
 
-h2o.init(nthreads = -1)
-
+set.seed(62)
 keys <- df %>%
   distinct(Customer_Key) %>%
-  sample_frac(1) %>%
+  sample_frac(.1) %>%
   pull(Customer_Key)
 
 df <- df %>%
   filter(Customer_Key %in% keys)
 
 df <- df %>%
-  mutate(Date = ymd(Date_Key),
+  mutate(Date = ymd(Date_Key),s
          WeekDay = data.table::wday(Date),
          Time = parse_time(as.character(TimeOfDay))) %>%
   select(Customer_Key,Time,WeekDay) %>%
@@ -80,7 +83,7 @@ df <- df %>%
                              WeekDay == 5 ~ "Friday",
                              WeekDay == 6 ~ "Saturday",
                              WeekDay == 7 ~ "Sunday")) %>%
-  mutate(Time = as.numeric(seconds(Time)))
+  mutate(secs = as.numeric(seconds(Time)))
 
 # Get mode day
 getmode <- function(v) {
