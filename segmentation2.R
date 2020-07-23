@@ -16,7 +16,6 @@
 library(tidyverse)
 library(RODBC)
 library(lubridate)
-
 library(data.table)
 library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)

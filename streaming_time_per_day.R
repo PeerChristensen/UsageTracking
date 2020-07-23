@@ -64,3 +64,9 @@ n_titler %>%
   theme_minimal() +
   ylim(c(0,2))
 
+# avg tid per dag
+tid <- df %>%
+  #filter(Customer_Key == 12010588) %>%
+  group_by(Date) %>%
+  summarise(time = (sum(msec) / 1000) / 60) %>%
+  summarise(avg_time = mean(time))
