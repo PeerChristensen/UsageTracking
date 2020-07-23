@@ -2,7 +2,6 @@
 library(tidyverse)
 library(RODBC)
 library(lubridate)
-
 library(data.table)
 library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)
@@ -62,9 +61,15 @@ df %>%
   complete(Customer_Key,WeekDay=1:7,hour = 0:23,fill=list(n=0)) %>%
   ggplot(aes(factor(WeekDay),hour,fill=log(n+1))) +
   geom_tile() +
-  scale_fill_gradient(low= "lightyellow",high = "darkred") +
+  scale_fill_gradient(low= "white",high = "darkred") +
   theme_minimal() +
-  facet_wrap(~Customer_Key)
+  labs(x="Weekday") +
+  facet_wrap(~Customer_Key) +
+  theme(legend.position = "none",
+        panel.grid = element_blank(),
+        strip.text = element_text(size=14),
+        axis.title = element_text(size=14),
+        axis.text = element_text(size = 12))
 
 df %>%
   filter(Customer_Key %in% keys[1:100]) %>%

@@ -50,7 +50,7 @@ query <- "SELECT Date_Key
  
 df <- sqlQuery(channel,query)
  
- # write_csv(df,"example_data.csv")
+#write_csv(df,"example_data.csv")
 
 # ----------------------------------------------------------------------------------------
 
@@ -64,14 +64,14 @@ h2o.no_progress()
 set.seed(62)
 keys <- df %>%
   distinct(Customer_Key) %>%
-  sample_frac(.1) %>%
+ # sample_frac(.1) %>%
   pull(Customer_Key)
 
 df <- df %>%
   filter(Customer_Key %in% keys)
 
 df <- df %>%
-  mutate(Date = ymd(Date_Key),s
+  mutate(Date = ymd(Date_Key),
          WeekDay = data.table::wday(Date),
          Time = parse_time(as.character(TimeOfDay))) %>%
   select(Customer_Key,Time,WeekDay) %>%
@@ -83,7 +83,8 @@ df <- df %>%
                              WeekDay == 5 ~ "Friday",
                              WeekDay == 6 ~ "Saturday",
                              WeekDay == 7 ~ "Sunday")) %>%
-  mutate(secs = as.numeric(seconds(Time)))
+  mutate(secs = as.numeric(seconds(Time))) %>%
+  select(-Time)
 
 # Get mode day
 getmode <- function(v) {
@@ -95,6 +96,7 @@ day_modes <- df %>%
   group_by(Customer_Key) %>%
   summarise(dayMode = getmode(WeekDay))
   
+
 all_centers <- tibble()
 
 for(key in keys){
@@ -102,14 +104,14 @@ for(key in keys){
   d <- df %>%
     filter(Customer_Key == key)
   
-  if (n_distinct(d$Time) >= 20) {
+  if (n_distinct(d$secs) >= 20) {
   
     d <- as.h2o(d)
   
-    km = h2o.kmeans(d,k = 3, x = c("Time"),estimate_k = T)
+    km = h2o.kmeans(d,k = 3, x = c("secs"),estimate_k = T)
     
     centers <- km@model$centers %>% as_tibble()
-    centers$time <- hms::hms(centers$time)
+    centers$time <- hms::hms(centers$secs)
     
     centers$wss <- km@model$training_metrics@metrics$centroid_stats$within_cluster_sum_of_squares
    
@@ -131,7 +133,7 @@ output <- all_centers %>%
 
 toc()
 
-#write_csv(output,"full_output.csv")
+#swrite_csv(output,"full_output.csv")
 
 # df %>%
 #   ggplot(aes(medianTime,sdTime,colour=factor(cluster))) +
